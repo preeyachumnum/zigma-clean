@@ -473,7 +473,7 @@ export default function BookingPage() {
       <div className="mx-auto flex w-full max-w-md flex-col gap-4 pb-10">
         <section className="px-1 pt-2">
           <div className="inline-flex rounded-full border border-slate-200/80 bg-white/75 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500 shadow-[0_8px_24px_rgba(15,23,42,0.05)] backdrop-blur">
-            Zigma Carcare
+            Zigma Clean
           </div>
           <h1 className="mt-3 text-[34px] font-semibold leading-[1.05] text-slate-950">
             จองคิวล้างรถ

@@ -1,4 +1,4 @@
-# Zigma Carcare Mini App
+# Zigma Clean Mini App
 
 ระบบจองคิวร้านคาร์แคร์แบบ LINE Mini App แยกหน้าลูกค้าและหลังบ้านชัดเจน โดยเก็บข้อมูลด้วย Google Sheet + Google Apps Script
 

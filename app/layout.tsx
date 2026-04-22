@@ -9,8 +9,8 @@ const notoSansThai = Noto_Sans_Thai({
 });
 
 export const metadata: Metadata = {
-  title: "Zigma Carcare Booking",
-  description: "LINE Mini App สำหรับระบบจองคิวร้านคาร์แคร์ Zigma Carcare",
+  title: "Zigma Clean Booking",
+  description: "LINE Mini App สำหรับระบบจองคิวร้านคาร์แคร์ Zigma Clean",
 };
 
 export default function RootLayout({
