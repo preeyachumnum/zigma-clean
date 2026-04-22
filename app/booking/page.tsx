@@ -75,7 +75,7 @@ function normalizePhoneNumber(phoneNumber: string) {
 
 function getCustomerKey(profile?: LiffProfile) {
   if (profile?.userId) {
-    return `line-user:${profile.userId}`;
+    return `${profile.userId}`;
   }
 
   if (profile?.displayName) {
@@ -116,7 +116,7 @@ export default function BookingPage() {
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
   const [bookingForm, setBookingForm] = useState(initialFormState);
   const [modalError, setModalError] = useState("");
-  const [flowStep, setFlowStep] = useState<"browse" | "payment" | "confirmation">(
+  const [flowStep, setFlowStep] = useState<"browse" | "payment" | "confirmation" | "history">(
     "browse",
   );
   const [paymentDraft, setPaymentDraft] = useState<PaymentDraft | null>(null);
@@ -454,6 +454,35 @@ export default function BookingPage() {
     setSelectedPaymentId(PAYMENT_METHODS[0].id);
   }
 
+  async function handleViewHistory() {
+    if (customerHistory.length === 0) return;
+
+    const activeBookings = customerHistory.filter((booking) => {
+      const bookingEndDateTime = new Date(`${booking.dateKey}T${booking.endTime}:00`);
+      return bookingEndDateTime > new Date();
+    });
+
+    if (activeBookings.length > 0) {
+      const bookingToShow = activeBookings[0];
+      const qrCodeDataUrl = await QRCode.toDataURL(bookingToShow.qrPayload, {
+        width: 220,
+        margin: 1,
+        color: {
+          dark: "#0f172a",
+          light: "#ffffff",
+        },
+      });
+
+      setConfirmation({
+        booking: bookingToShow,
+        qrCodeDataUrl,
+      });
+      setFlowStep("confirmation");
+    } else {
+      setFlowStep("history");
+    }
+  }
+
   if (!isReady || !selectedService || !selectedDate) {
     return (
       <main className="min-h-screen px-4 py-6">
@@ -478,11 +507,21 @@ export default function BookingPage() {
           <h1 className="mt-3 text-[34px] font-semibold leading-[1.05] text-slate-950">
             จองคิวล้างรถ
           </h1>
-          {liffState.status === "ready" && liffState.profile ? (
-            <p className="mt-2 text-sm text-slate-500">
-              ใช้ชื่อ LINE: {liffState.profile.displayName}
-            </p>
-          ) : null}
+          <div className="mt-2 flex items-center justify-between">
+            {liffState.status === "ready" && liffState.profile ? (
+              <p className="text-sm text-slate-500">
+                ใช้ชื่อ LINE: {liffState.profile.displayName}
+              </p>
+            ) : <div />}
+            {customerHistory.length > 0 && (
+              <button
+                onClick={handleViewHistory}
+                className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 shadow-sm transition-colors hover:bg-emerald-100"
+              >
+                ประวัติการจอง
+              </button>
+            )}
+          </div>
           {liffState.status === "error" ? (
             <p className="mt-2 text-sm text-amber-700">
               {liffState.errorMessage || "เชื่อมต่อ LINE ไม่สำเร็จ"}
@@ -497,6 +536,38 @@ export default function BookingPage() {
             <p className="mt-2 text-sm text-rose-700">{dataError}</p>
           ) : null}
         </section>
+
+        {flowStep === "history" ? (
+          <section className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-[28px] font-semibold leading-tight text-slate-950">ประวัติการจอง</h2>
+              <button
+                onClick={resetToBrowse}
+                className="text-sm font-medium text-slate-500 hover:text-slate-900"
+              >
+                กลับหน้าหลัก
+              </button>
+            </div>
+            <div className="space-y-4">
+              {customerHistory.map((booking) => (
+                <div key={booking.id} className="rounded-[26px] border border-slate-200 bg-white p-5 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <div className="font-semibold text-slate-950">{booking.serviceName}</div>
+                    <div className={`text-xs font-semibold px-3 py-1 rounded-full ${booking.paymentStatus === "paid" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+                      {booking.paymentStatus === "paid" ? "ชำระเงินแล้ว" : "รอชำระเงิน"}
+                    </div>
+                  </div>
+                  <div className="mt-4 text-sm text-slate-600 space-y-2">
+                    <p><span className="text-slate-400">วันที่:</span> {booking.dateLabel}</p>
+                    <p><span className="text-slate-400">เวลา:</span> {booking.time} - {booking.endTime}</p>
+                    <p><span className="text-slate-400">ทะเบียนรถ:</span> {booking.licensePlate}</p>
+                    <p><span className="text-slate-400">ราคา:</span> {formatPrice(booking.amount)}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        ) : null}
 
         {flowStep === "browse" ? (
           <section className="space-y-4 rounded-[30px] border border-white/80 bg-white/92 p-4 shadow-[0_18px_52px_rgba(15,23,42,0.08)]">
@@ -515,18 +586,16 @@ export default function BookingPage() {
                     key={service.id}
                     type="button"
                     onClick={() => setSelectedServiceId(service.id)}
-                    className={`rounded-[26px] border px-4 py-4 text-left transition ${
-                      isSelected
+                    className={`rounded-[26px] border px-4 py-4 text-left transition ${isSelected
                         ? "border-[#c5852c] bg-[linear-gradient(135deg,#fff5de_0%,#fffaf2_48%,#ffffff_100%)] shadow-[0_18px_38px_rgba(197,133,44,0.16)]"
                         : "border-slate-200/90 bg-white shadow-[0_6px_18px_rgba(15,23,42,0.04)]"
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center justify-between gap-4">
                       <div className="flex items-center gap-3">
                         <span
-                          className={`h-3 w-3 rounded-full ${
-                            isSelected ? "bg-[#c5852c]" : "bg-slate-200"
-                          }`}
+                          className={`h-3 w-3 rounded-full ${isSelected ? "bg-[#c5852c]" : "bg-slate-200"
+                            }`}
                         />
                         <p className="text-[18px] font-semibold text-slate-950">
                           {service.name}
@@ -556,11 +625,10 @@ export default function BookingPage() {
                     key={bookingDate.key}
                     type="button"
                     onClick={() => setSelectedDateKey(bookingDate.key)}
-                    className={`min-w-[108px] rounded-[22px] border px-4 py-3 text-left transition ${
-                      isSelected
+                    className={`min-w-[108px] rounded-[22px] border px-4 py-3 text-left transition ${isSelected
                         ? "border-slate-950 bg-slate-950 text-white shadow-[0_16px_28px_rgba(15,23,42,0.18)]"
                         : "border-slate-200/90 bg-white text-slate-900 shadow-[0_6px_18px_rgba(15,23,42,0.04)]"
-                    }`}
+                      }`}
                   >
                     <p className="text-xs">{bookingDate.weekday}</p>
                     <p className="mt-1 text-base font-semibold">{bookingDate.label}</p>
@@ -656,11 +724,10 @@ export default function BookingPage() {
                     key={paymentMethod.id}
                     type="button"
                     onClick={() => setSelectedPaymentId(paymentMethod.id)}
-                    className={`rounded-[24px] border px-4 py-4 text-left transition ${
-                      isSelected
+                    className={`rounded-[24px] border px-4 py-4 text-left transition ${isSelected
                         ? "border-emerald-300 bg-emerald-50 shadow-[0_10px_24px_rgba(16,185,129,0.12)]"
                         : "border-slate-200 bg-white"
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center justify-between gap-3">
                       <div>
